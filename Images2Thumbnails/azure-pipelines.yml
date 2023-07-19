@@ -1,0 +1,19 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+trigger:
+- master
+
+
+steps:
+
+- task: AzureFunctionApp@2
+  inputs:
+    azureSubscription: 'Students(8c874251-19f3-4632-814a-10696094b7bf)'
+    appType: 'functionAppLinux'
+    appName: 'image2thumbnail'
+    package: '$(System.DefaultWorkingDirectory)/**/*.zip'
+    runtimeStack: 'PYTHON|3.8'
+    deploymentMethod: 'auto'

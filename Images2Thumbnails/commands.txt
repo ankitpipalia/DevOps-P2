@@ -1,0 +1,4 @@
+func init MyThumbnailFunction --python
+func new --name ThumbnailFunction --template "blobTrigger" --language "Python"
+pip3 install -r requirments.txt
+func azure functionapp publish <function_name>

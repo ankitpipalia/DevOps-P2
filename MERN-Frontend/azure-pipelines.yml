@@ -1,0 +1,30 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '14.x'
+  displayName: 'Install Node.js'
+
+- script: |
+    npm install
+  displayName: 'npm install'
+
+- script: |
+    npm run-script build
+  displayName: 'npm build'
+
+- task: AzureFileCopy@3
+  inputs:
+    SourcePath: '$(System.DefaultWorkingDirectory)/build'
+    azureSubscription: 'Parshwa-Azure'
+    Destination: 'AzureBlob'
+    storage: 'ankitfrontend'
+    ContainerName: '$web'
+    outputStorageUri: 'https://ankitfrontend.blob.core.windows.net/$web?sp=racwdli&st=2023-07-18T10:09:35Z&se=2023-07-31T18:09:35Z&spr=https&sv=2022-11-02&sr=c&sig=nAlCAtkvWhPQqg5QLzZE1FYqyxQn%2BdofD3TjH23N%2FLs%3D'
+    outputStorageContainerSasToken: 'sp=racwdli&st=2023-07-18T10:09:35Z&se=2023-07-31T18:09:35Z&spr=https&sv=2022-11-02&sr=c&sig=nAlCAtkvWhPQqg5QLzZE1FYqyxQn%2BdofD3TjH23N%2FLs%3D'
+    CleanTargetBeforeCopy: true
