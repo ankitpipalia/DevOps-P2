@@ -27,7 +27,6 @@ resource "azurerm_resource_group" "front-rg" {
 }
 
 # FrontEnd
-
 # Storage Account
 
 resource "azurerm_storage_account" "front-stg" {
@@ -83,6 +82,14 @@ resource "azurerm_subnet" "as-subnet" {
   resource_group_name  = azurerm_resource_group.back-rg.name
   virtual_network_name = azurerm_virtual_network.task-vnet.name
   address_prefixes     = ["10.0.0.0/24"]
+  delegation {
+    name = "delegation"
+  
+    service_delegation {
+      name    = "Microsoft.Web/serverFarms"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
+  }
 }
 
 resource "azurerm_subnet" "db-subnet" {
@@ -107,9 +114,17 @@ resource "azurerm_linux_web_app" "back-as" {
   location            = azurerm_resource_group.back-rg.location
   service_plan_id     = azurerm_service_plan.back-sp.id
 
-  site_config {}
+  site_config {
+    vnet_route_all_enabled = true
+  }
 }
 
+# Vnet Integration for app service
+resource "azurerm_app_service_virtual_network_swift_connection" "as-vnet" {
+  app_service_id = azurerm_linux_web_app.back-as.id
+  subnet_id      = azurerm_subnet.as-subnet.id 
+  depends_on = [ azurerm_subnet.as-subnet ]
+}
 
 ## DATABASE
 resource "azurerm_cosmosdb_account" "dbacc" {
@@ -145,6 +160,21 @@ resource "azurerm_cosmosdb_account" "dbacc" {
   }
 }
 
+# NIC
+resource "azurerm_network_interface" "db-nic" {
+  name                = "taskdbnic"
+  location            = azurerm_resource_group.back-rg.location
+  resource_group_name = azurerm_resource_group.back-rg.name
+
+  ip_configuration {
+    name                          = "dbnic"
+    subnet_id                     = azurerm_subnet.db-subnet.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+
+# EndPoint
 resource "azurerm_private_endpoint" "pvt-endpoint" {
   name                = "Mongo-private-endpoint"
   location            = azurerm_resource_group.back-rg.location
@@ -153,10 +183,12 @@ resource "azurerm_private_endpoint" "pvt-endpoint" {
 
   private_service_connection {
     name                           = "tfex-cosmosdb-connection"
-    is_manual_connection           = false
+    is_manual_connection       = true
     private_connection_resource_id = azurerm_cosmosdb_account.dbacc.id
     subresource_names              = ["MongoDB"]
+    request_message            = "-"
   }
+  depends_on = [ azurerm_network_interface.db-nic ]
 }
 
 # Function
